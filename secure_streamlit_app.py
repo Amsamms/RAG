@@ -59,6 +59,8 @@ if 'api_key_set' not in st.session_state:
     st.session_state.api_key_set = False
 if 'selected_model' not in st.session_state:
     st.session_state.selected_model = "gpt-3.5-turbo"
+if 'max_output_tokens' not in st.session_state:
+    st.session_state.max_output_tokens = 1500
 if 'processed_files' not in st.session_state:
     st.session_state.processed_files = []
 
@@ -131,6 +133,26 @@ def display_api_key_configuration():
     current_model = available_models.get(st.session_state.selected_model, {})
     st.info(f"🎯 Currently selected: **{current_model.get('name', 'None')}** ({st.session_state.selected_model})")
     
+    # Output tokens control
+    st.subheader("📝 Response Length Control")
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        max_output_tokens = st.slider(
+            "Maximum output tokens (response length)",
+            min_value=100,
+            max_value=3000,
+            value=st.session_state.max_output_tokens,
+            step=100,
+            help="Controls how long AI responses can be. ~750 tokens = 1 page of text"
+        )
+        st.session_state.max_output_tokens = max_output_tokens
+    
+    with col2:
+        # Show approximate word count
+        approx_words = max_output_tokens * 0.75
+        st.metric("≈ Words", f"{int(approx_words)}")
+        st.metric("≈ Pages", f"{approx_words/400:.1f}")
+    
     # Set credentials button
     if st.button("🔒 Set API Key & Model", type="primary"):
         if api_key and api_key.strip():
@@ -167,7 +189,7 @@ def display_cost_calculator():
         avg_input_tokens = st.slider("Average input tokens (context + question)", 500, 8000, 2000)
     
     with col2:
-        avg_output_tokens = st.slider("Average output tokens (response length)", 50, 1000, 200)
+        avg_output_tokens = st.slider("Average output tokens (response length)", 50, 3000, st.session_state.max_output_tokens)
         time_period = st.selectbox("Time period", ["Monthly", "Annual"])
     
     # Calculate costs for all models
@@ -649,7 +671,7 @@ def display_query_interface():
                         st.subheader("🤖 AI Response")
                         try:
                             ai_response = rag.generate_llm_response(
-                                question, results['results'][:5], st.session_state.selected_model
+                                question, results['results'][:5], st.session_state.selected_model, st.session_state.max_output_tokens
                             )
                             st.info(ai_response)
                         except Exception as e:

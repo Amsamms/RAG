@@ -461,7 +461,7 @@ class SecureMultiFormatRAG:
         
         return response
     
-    def generate_llm_response(self, question: str, context_results: List[Dict], model: str = None) -> str:
+    def generate_llm_response(self, question: str, context_results: List[Dict], model: str = None, max_output_tokens: int = None) -> str:
         """Generate a natural language response using OpenAI"""
         if not self.llm_available:
             return "❌ OpenAI API not available. Please set your API key in the interface."
@@ -481,7 +481,12 @@ class SecureMultiFormatRAG:
         
         # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
         estimated_tokens = len(context_text + question) // 4
-        response_tokens = min(1500, max_tokens // 2)  # Allow longer, more detailed responses
+        
+        # Use custom max_output_tokens if provided, otherwise use default calculation
+        if max_output_tokens:
+            response_tokens = min(max_output_tokens, max_tokens // 2)
+        else:
+            response_tokens = min(1500, max_tokens // 2)  # Default fallback
         
         if estimated_tokens > (max_tokens - response_tokens):
             # Truncate context if too long
