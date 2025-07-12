@@ -227,28 +227,33 @@ class SecureMultiFormatRAG:
             
             logger.info(f"Word document: {total_chars} chars, estimated {total_estimated_pages} pages, {len(chunks)} chunks")
             
+            chunk_index = 0
             for chunk_id, chunk in enumerate(chunks):
                 if chunk.strip():
-                    # More precise page estimation based on chunk distribution
-                    if len(chunks) == 1:
+                    # Fixed page estimation - distribute chunks evenly across estimated pages
+                    if total_estimated_pages == 1:
                         estimated_page = 1
                     else:
-                        # Distribute chunks more evenly across estimated pages
-                        # Each page should get roughly equal number of chunks
-                        chunks_per_page = max(1, len(chunks) / total_estimated_pages)
-                        estimated_page = min(total_estimated_pages, int(chunk_id / chunks_per_page) + 1)
+                        # Calculate which page this chunk should be on
+                        # Use chunk_index (only counting non-empty chunks) for better distribution
+                        chunks_per_page = len([c for c in chunks if c.strip()]) / total_estimated_pages
+                        estimated_page = min(total_estimated_pages, int(chunk_index / chunks_per_page) + 1)
                     
-                    pages_data.append({
+                    chunk_data = {
                         'text': chunk.strip(),
                         'document': os.path.basename(file_path),
                         'page': estimated_page,
                         'chunk_id': chunk_id,
                         'file_path': file_path,
                         'file_type': 'word'
-                    })
+                    }
+                    
+                    pages_data.append(chunk_data)
                     
                     # Debug logging
-                    logger.info(f"Chunk {chunk_id}: assigned to page {estimated_page} (text length: {len(chunk)})")
+                    logger.info(f"Chunk {chunk_id}: assigned to page {estimated_page} (chunk_index: {chunk_index}, text length: {len(chunk)})")
+                    
+                    chunk_index += 1
             
             return pages_data
             

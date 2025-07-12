@@ -340,9 +340,10 @@ def display_document_interface():
                             
                             with col_check:
                                 is_selected = st.checkbox(
-                                    "", 
+                                    "Select file", 
                                     value=select_all,
-                                    key=f"{category}_{i}_{file_info['name']}"
+                                    key=f"{category}_{i}_{file_info['name']}",
+                                    label_visibility="hidden"
                                 )
                                 if is_selected:
                                     selected_files.append(file_info)
