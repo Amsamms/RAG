@@ -670,9 +670,16 @@ def display_query_interface():
                     if use_llm and rag.llm_available:
                         st.subheader("🤖 AI Response")
                         try:
-                            ai_response = rag.generate_llm_response(
-                                question, results['results'][:5], model=st.session_state.selected_model, max_output_tokens=st.session_state.max_output_tokens
-                            )
+                            # Try with max_output_tokens parameter, fall back to without if needed
+                            try:
+                                ai_response = rag.generate_llm_response(
+                                    question, results['results'][:5], model=st.session_state.selected_model, max_output_tokens=st.session_state.max_output_tokens
+                                )
+                            except TypeError:
+                                # Fallback for older method signature
+                                ai_response = rag.generate_llm_response(
+                                    question, results['results'][:5], model=st.session_state.selected_model
+                                )
                             st.info(ai_response)
                         except Exception as e:
                             st.error(f"❌ AI response failed: {str(e)}")
