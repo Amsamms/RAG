@@ -1,0 +1,59 @@
+
+Chemical Process Equipment Manual
+==================================
+
+Chapter 5: Amine Treatment Systems
+
+Introduction:
+Amine treatment is a widely used method for removing acid gases (H2S and CO2) from natural gas and refinery gas streams. The process utilizes aqueous solutions of various amines, with ethanolamine being one of the most common.
+
+Types of Ethanolamines:
+
+1. Monoethanolamine (MEA)
+   - Chemical formula: HOCH2CH2NH2
+   - Most reactive amine
+   - Highest heat of reaction
+   - Used for very deep acid gas removal
+   - Requires more energy for regeneration
+
+2. Diethanolamine (DEA)
+   - Chemical formula: (HOCH2CH2)2NH
+   - Less reactive than MEA
+   - Lower heat of reaction
+   - Better thermal stability
+   - Suitable for moderate acid gas concentrations
+
+3. Methyldiethanolamine (MDEA)
+   - Chemical formula: (HOCH2CH2)2NCH3
+   - Selective for H2S over CO2
+   - Lowest heat of reaction
+   - Excellent thermal stability
+   - Used in selective treating applications
+
+Process Description:
+The amine treatment process consists of two main sections:
+1. Absorption section - where acid gases are absorbed
+2. Regeneration section - where the amine is stripped and recycled
+
+Equipment Specifications:
+- Absorber tower: typically 20-40 trays
+- Regenerator: 18-24 trays
+- Heat exchanger: shell and tube design
+- Pumps: centrifugal type with corrosion-resistant materials
+
+Safety Considerations:
+When working with ethanolamine solutions:
+- Always wear appropriate PPE including gloves and safety glasses
+- Ensure adequate ventilation in work areas
+- Have emergency shower and eyewash stations readily available
+- Monitor for amine vapors in confined spaces
+- Follow proper lockout/tagout procedures during maintenance
+
+Troubleshooting:
+Common issues in amine systems include:
+- Foaming due to contamination
+- Corrosion from acid gas loading
+- Thermal degradation at high temperatures
+- Mechanical problems with pumps and heat exchangers
+
+For more information, consult the process flow diagrams and P&ID drawings in the appendix.
