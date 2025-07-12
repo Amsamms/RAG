@@ -6,7 +6,7 @@ No API keys stored in code or environment files
 
 import os
 import fitz  # PyMuPDF
-import chromadb
+from faiss_vector_store import FaissClient
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any, Optional
 from pathlib import Path
@@ -82,7 +82,7 @@ class SecureMultiFormatRAG:
     
     def __init__(self, collection_name: str = "secure_documents", batch_size: int = 50):
         """Initialize secure RAG system - API key must be provided by user"""
-        self.client = chromadb.Client()
+        self.client = FaissClient()
         self.collection_name = collection_name
         self.batch_size = batch_size
         self.embedding_model_name = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
@@ -95,11 +95,12 @@ class SecureMultiFormatRAG:
         
         # Initialize collection
         try:
-            self.collection = self.client.get_collection(name=collection_name)
-            logger.info(f"Using existing collection: {collection_name}")
-        except Exception:
+            self.collection = self.client.get_or_create_collection(name=collection_name)
+            logger.info(f"Using FAISS collection: {collection_name}")
+        except Exception as e:
+            logger.error(f"Error initializing FAISS collection: {e}")
             self.collection = self.client.create_collection(name=collection_name)
-            logger.info(f"Created new collection: {collection_name}")
+            logger.info(f"Created new FAISS collection: {collection_name}")
         
         # Processing statistics
         self.processing_stats = {
@@ -344,6 +345,94 @@ class SecureMultiFormatRAG:
         else:
             logger.warning(f"Unsupported file type: {file_ext}")
             return []
+    
+    def process_documents_parallel(self, directory: str = ".", max_workers: int = 4) -> int:
+        """Process documents in parallel for better performance"""
+        start_time = time.time()
+        
+        # Find all supported files
+        supported_extensions = {'.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'}
+        all_files = []
+        
+        for ext in supported_extensions:
+            all_files.extend(Path(directory).glob(f"*{ext}"))
+        
+        self.processing_stats['total_files'] = len(all_files)
+        logger.info(f"Found {len(all_files)} files to process")
+        
+        if not all_files:
+            logger.warning("No supported files found")
+            return 0
+        
+        # Process files in parallel
+        all_documents = []
+        all_embeddings = []
+        all_metadatas = []
+        all_ids = []
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all files for processing
+            future_to_file = {executor.submit(self.process_single_file, file_path): file_path 
+                             for file_path in all_files}
+            
+            # Collect results with progress bar
+            for future in tqdm(as_completed(future_to_file), total=len(all_files), desc="Processing files"):
+                file_path = future_to_file[future]
+                try:
+                    pages_data = future.result()
+                    if pages_data:
+                        self.processing_stats['successful'] += 1
+                        
+                        # Process chunks in batches for memory efficiency
+                        for page_data in pages_data:
+                            # Create embeddings
+                            embedding = self.embedding_model.encode(page_data['text'])
+                            
+                            # Prepare data for FAISS
+                            doc_id = f"{page_data['document']}_page_{page_data['page']}_chunk_{page_data['chunk_id']}"
+                            
+                            all_documents.append(page_data['text'])
+                            all_embeddings.append(embedding.tolist())
+                            all_metadatas.append({
+                                'document': page_data['document'],
+                                'page': page_data['page'],
+                                'chunk_id': page_data['chunk_id'],
+                                'file_path': page_data['file_path'],
+                                'file_type': page_data['file_type']
+                            })
+                            all_ids.append(doc_id)
+                            
+                            # Add to database in batches
+                            if len(all_documents) >= self.batch_size:
+                                self._add_batch_to_db(all_documents, all_embeddings, all_metadatas, all_ids)
+                                all_documents, all_embeddings, all_metadatas, all_ids = [], [], [], []
+                    
+                except Exception as e:
+                    logger.error(f"Error processing {file_path}: {e}")
+                    self.processing_stats['failed'] += 1
+        
+        # Add remaining documents
+        if all_documents:
+            self._add_batch_to_db(all_documents, all_embeddings, all_metadatas, all_ids)
+        
+        # Update statistics
+        self.processing_stats['total_chunks'] = self.collection.count()
+        self.processing_stats['processing_time'] = time.time() - start_time
+        
+        logger.info(f"Processing complete: {self.processing_stats}")
+        return self.processing_stats['total_chunks']
+    
+    def _add_batch_to_db(self, documents, embeddings, metadatas, ids):
+        """Add a batch of documents to the FAISS database"""
+        try:
+            self.collection.add(
+                documents=documents,
+                embeddings=embeddings,
+                metadatas=metadatas,
+                ids=ids
+            )
+        except Exception as e:
+            logger.error(f"Error adding batch to database: {e}")
     
     def search_documents(self, question: str, n_results: int = 10) -> Dict[str, Any]:
         """Search documents with optimized performance for large datasets"""
