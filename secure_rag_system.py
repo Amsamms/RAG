@@ -481,7 +481,7 @@ class SecureMultiFormatRAG:
         
         # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
         estimated_tokens = len(context_text + question) // 4
-        response_tokens = min(500, max_tokens // 4)  # Reserve space for response
+        response_tokens = min(1500, max_tokens // 2)  # Allow longer, more detailed responses
         
         if estimated_tokens > (max_tokens - response_tokens):
             # Truncate context if too long
