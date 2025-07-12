@@ -233,9 +233,10 @@ class SecureMultiFormatRAG:
                     if len(chunks) == 1:
                         estimated_page = 1
                     else:
-                        # Distribute chunks across estimated pages
-                        page_progress = chunk_id / (len(chunks) - 1)  # 0 to 1
-                        estimated_page = max(1, int(page_progress * (total_estimated_pages - 1)) + 1)
+                        # Distribute chunks more evenly across estimated pages
+                        # Each page should get roughly equal number of chunks
+                        chunks_per_page = max(1, len(chunks) / total_estimated_pages)
+                        estimated_page = min(total_estimated_pages, int(chunk_id / chunks_per_page) + 1)
                     
                     pages_data.append({
                         'text': chunk.strip(),
