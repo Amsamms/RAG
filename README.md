@@ -1,10 +1,10 @@
-# 📚 PDF RAG System with AI Integration
+# 📚 Multi-Document RAG System with AI Integration
 
-A complete Retrieval-Augmented Generation (RAG) system for querying PDF documents using semantic search and AI-powered responses.
+A complete Retrieval-Augmented Generation (RAG) system for querying multiple document types (PDF, DOCX, TXT, XLSX, PPTX) using semantic search and AI-powered responses.
 
 ## 🚀 Features
 
-- **📄 PDF Processing**: Automatically extracts and chunks text from multiple PDF files
+- **📄 Multi-Format Processing**: Supports PDF, DOCX, TXT, XLSX, and PPTX files with automatic text extraction
 - **🔍 Semantic Search**: Uses sentence transformers for intelligent document search
 - **🤖 AI Responses**: Integrates with OpenAI to provide natural language answers
 - **🌐 Web Interface**: Beautiful Streamlit interface for easy interaction
@@ -32,8 +32,8 @@ A complete Retrieval-Augmented Generation (RAG) system for querying PDF document
 
 ## 📁 Setup
 
-1. Place your PDF files in the project directory
-2. The system will automatically detect and process them
+1. Place your documents (PDF, DOCX, TXT, XLSX, PPTX) in the project directory
+2. The system will automatically detect and process all supported file types
 
 ## 🖥️ Usage
 
@@ -48,7 +48,8 @@ Then open your browser to `http://localhost:8501`
 
 **Features:**
 - 🔧 Initialize the RAG system
-- 📚 Process PDF files
+- 📚 Process multiple document types (PDF, DOCX, TXT, XLSX, PPTX)
+- 📁 Upload documents via web interface
 - 🔍 Ask questions with AI responses
 - 📊 View system statistics
 - 💡 Try sample questions
@@ -89,9 +90,9 @@ To enable AI-powered responses:
 ## 🏗️ System Architecture
 
 ```
-📁 PDF Files
+📁 Document Files (PDF, DOCX, TXT, XLSX, PPTX)
     ↓
-📄 Text Extraction (PyMuPDF)
+📄 Text Extraction (PyMuPDF, python-docx, openpyxl, python-pptx)
     ↓
 ✂️ Text Chunking
     ↓
@@ -107,10 +108,13 @@ To enable AI-powered responses:
 ## 📊 Components
 
 - **PyMuPDF (fitz)**: PDF text extraction with page tracking
+- **python-docx**: Word document (.docx) processing
+- **openpyxl**: Excel file (.xlsx) processing
+- **python-pptx**: PowerPoint (.pptx) processing
 - **SentenceTransformers**: Generate embeddings for semantic search
 - **ChromaDB**: Vector database for similarity search
 - **OpenAI API**: Generate natural language responses
-- **Streamlit**: Web interface
+- **Streamlit**: Web interface with file upload capabilities
 - **python-dotenv**: Environment variable management
 
 ## 🔧 Configuration
@@ -156,7 +160,7 @@ To enable AI-powered responses:
 
 2. **Initialize system** (click button in sidebar)
 
-3. **Process PDFs** (click button in sidebar)
+3. **Process documents** (click button in sidebar or upload files)
 
 4. **Ask questions** in the main interface
 
@@ -164,7 +168,7 @@ To enable AI-powered responses:
 
 ## 🆘 Troubleshooting
 
-- **No PDFs found**: Ensure PDF files are in the project directory
+- **No documents found**: Ensure supported files (PDF, DOCX, TXT, XLSX, PPTX) are in the project directory or upload them via the web interface
 - **LLM not working**: Check your OpenAI API key in .env file
 - **Import errors**: Ensure all dependencies are installed with `pip install -r requirements.txt`
 - **Port conflicts**: Streamlit default port is 8501, use `--port` flag to change
