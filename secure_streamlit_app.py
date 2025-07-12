@@ -671,7 +671,7 @@ def display_query_interface():
                         st.subheader("🤖 AI Response")
                         try:
                             ai_response = rag.generate_llm_response(
-                                question, results['results'][:5], st.session_state.selected_model, st.session_state.max_output_tokens
+                                question, results['results'][:5], model=st.session_state.selected_model, max_output_tokens=st.session_state.max_output_tokens
                             )
                             st.info(ai_response)
                         except Exception as e:

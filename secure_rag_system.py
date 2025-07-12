@@ -221,12 +221,21 @@ class SecureMultiFormatRAG:
             chunks = self._split_text(combined_text)
             
             pages_data = []
+            total_chars = len(combined_text)
+            chars_per_page = 2000  # Approximate characters per page
+            
             for chunk_id, chunk in enumerate(chunks):
                 if chunk.strip():
+                    # Estimate page number based on chunk position
+                    # Calculate which portion of the document this chunk represents
+                    chunk_start_ratio = chunk_id / len(chunks) if chunks else 0
+                    estimated_char_position = chunk_start_ratio * total_chars
+                    estimated_page = max(1, int(estimated_char_position // chars_per_page) + 1)
+                    
                     pages_data.append({
                         'text': chunk.strip(),
                         'document': os.path.basename(file_path),
-                        'page': 1,
+                        'page': estimated_page,
                         'chunk_id': chunk_id,
                         'file_path': file_path,
                         'file_type': 'word'
