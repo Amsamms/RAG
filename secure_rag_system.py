@@ -457,9 +457,50 @@ class SecureMultiFormatRAG:
         except Exception as e:
             logger.error(f"Error adding batch to database: {e}")
     
-    def search_documents(self, question: str, n_results: int = 10) -> Dict[str, Any]:
-        """Search documents with optimized performance for large datasets"""
-        question_embedding = self.embedding_model.encode(question)
+    def enhance_query_with_llm(self, user_query: str) -> str:
+        """Use LLM to enhance and expand the user query for better search results"""
+        if not self.llm_available:
+            return user_query  # Return original query if LLM not available
+        
+        prompt = f"""You are a search query enhancement specialist. Your task is to improve search queries for better document retrieval.
+
+Original user query: "{user_query}"
+
+Please enhance this query to make it more effective for document search by:
+1. Adding relevant synonyms and related terms
+2. Expanding technical terms with common variations
+3. Including related concepts that might appear in documents
+4. Keeping the core intent while broadening the search scope
+
+Provide ONLY the enhanced search query, no explanations or additional text."""
+
+        try:
+            response = openai.chat.completions.create(
+                model=self.openai_model,
+                messages=[
+                    {"role": "system", "content": "You are a search query enhancement specialist. Respond only with improved search queries, no explanations."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=150,
+                temperature=0.3
+            )
+            
+            enhanced_query = response.choices[0].message.content.strip()
+            return enhanced_query if enhanced_query else user_query
+            
+        except Exception as e:
+            logger.warning(f"Query enhancement failed: {e}")
+            return user_query  # Fallback to original query
+
+    def search_documents(self, question: str, n_results: int = 10, use_llm_enhancement: bool = False) -> Dict[str, Any]:
+        """Search documents with optional LLM query enhancement"""
+        # Enhance query with LLM if requested and available
+        search_query = question
+        if use_llm_enhancement and self.llm_available:
+            search_query = self.enhance_query_with_llm(question)
+            logger.info(f"Enhanced query: '{question}' -> '{search_query}'")
+        
+        question_embedding = self.embedding_model.encode(search_query)
         
         results = self.collection.query(
             query_embeddings=[question_embedding.tolist()],
@@ -468,6 +509,7 @@ class SecureMultiFormatRAG:
         
         response = {
             'question': question,
+            'enhanced_query': search_query if use_llm_enhancement else None,
             'results': []
         }
         
@@ -516,23 +558,28 @@ class SecureMultiFormatRAG:
             max_context_chars = (max_tokens - response_tokens - 100) * 4  # Leave buffer
             context_text = context_text[:max_context_chars] + "..."
         
-        # Create the prompt
-        prompt = f"""You are a helpful assistant that answers questions based on the provided document content. 
-        
-Use the following context to answer the question. If the answer is not in the context, say so.
-Always cite the document name, page number, and file type when referencing information.
+        # Create the enhanced prompt
+        prompt = f"""You are an expert document analyst that provides comprehensive answers based on document content.
+
+Your task is to:
+1. Answer the user's question thoroughly using the provided context
+2. Explain the relevance and significance of the information found
+3. Highlight any patterns, relationships, or insights across different documents
+4. Cite specific sources (document name, page number, file type) for all information
+5. If information is incomplete, suggest what additional context might be helpful
+6. If the answer isn't in the context, clearly state this and explain what was searched
 
 Question: {question}
 
 Context from documents:{context_text}
 
-Answer:"""
+Please provide a comprehensive analysis and answer:"""
         
         try:
             response = openai.chat.completions.create(
                 model=use_model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that answers questions based on document content. Always cite sources with document name, page number, and file type."},
+                    {"role": "system", "content": "You are an expert document analyst. Provide thorough, well-cited answers that explain the significance of findings across multiple document sources. Always cite document name, page number, and file type."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=response_tokens,
@@ -543,6 +590,55 @@ Answer:"""
             
         except Exception as e:
             return f"❌ Error generating LLM response: {str(e)}"
+
+    def explain_search_results(self, question: str, search_results: List[Dict], model: str = None) -> str:
+        """Generate an explanation of search results and their relevance"""
+        if not self.llm_available:
+            return "❌ OpenAI API not available. Please set your API key in the interface."
+        
+        # Use specified model or default
+        use_model = model if model and model in self.AVAILABLE_MODELS else self.openai_model
+        
+        # Prepare summary of search results
+        results_summary = f"Found {len(search_results)} relevant chunks across your documents:\n\n"
+        
+        for i, result in enumerate(search_results, 1):
+            relevance_score = 1 - result.get('distance', 0)
+            results_summary += f"{i}. Document: {result['document']} (Page {result['page']}, {result.get('file_type', 'unknown').title()} file)\n"
+            results_summary += f"   Relevance Score: {relevance_score:.3f}\n"
+            results_summary += f"   Preview: {result['text'][:150]}...\n\n"
+        
+        prompt = f"""You are a search results analyst. Explain the search results to help the user understand what was found.
+
+Original Question: "{question}"
+
+Search Results Summary:
+{results_summary}
+
+Please provide a clear explanation that covers:
+1. Overview of what documents were found and their relevance to the question
+2. Quality assessment of the search results (relevance scores, coverage)
+3. Key themes or patterns across the found documents
+4. Which documents appear most relevant and why
+5. Suggestions for refining the search if needed
+
+Provide a helpful analysis for the user:"""
+        
+        try:
+            response = openai.chat.completions.create(
+                model=use_model,
+                messages=[
+                    {"role": "system", "content": "You are a search results analyst. Help users understand their search results by explaining relevance, patterns, and suggesting improvements."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=400,
+                temperature=0.3
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            return f"❌ Error generating search explanation: {str(e)}"
     
     def get_database_stats(self) -> Dict[str, Any]:
         """Get statistics about the document database"""

@@ -623,27 +623,37 @@ def display_query_interface():
     )
     
     # Query options
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         use_llm = st.checkbox("🤖 Use AI Response", value=True)
+        use_llm_enhancement = st.checkbox("🔍 Enhance Query with AI", value=False, 
+                                        help="Let AI expand your query with related terms for better search results")
     with col2:
         n_results = st.slider("Number of Results", 1, 20, 5)
-    with col3:
         file_type_filter = st.selectbox(
             "Filter by File Type",
             ["All Files", "PDF", "Word", "Excel", "PowerPoint"]
         )
     
+    # Advanced options
+    with st.expander("🔧 Advanced Search Options"):
+        explain_results = st.checkbox("📊 Get Search Results Analysis", value=False,
+                                    help="AI will analyze and explain the search results quality and relevance")
+    
     # Search button
     if st.button("🔍 Search", type="primary") and question:
-        if not rag.llm_available and use_llm:
-            st.error("❌ LLM not available. Please check your API key.")
+        if not rag.llm_available and (use_llm or use_llm_enhancement or explain_results):
+            st.error("❌ LLM not available. Please check your API key in the API Configuration tab.")
             return
         
         with st.spinner("🔍 Searching documents..."):
             try:
-                # Perform search
-                results = rag.search_documents(question, n_results)
+                # Perform search with optional LLM enhancement
+                results = rag.search_documents(question, n_results, use_llm_enhancement=use_llm_enhancement)
+                
+                # Show enhanced query if used
+                if use_llm_enhancement and results.get('enhanced_query') and results['enhanced_query'] != question:
+                    st.info(f"🔍 **Enhanced Query:** {results['enhanced_query']}")
                 
                 # Filter by file type if specified
                 if file_type_filter != "All Files":
@@ -668,6 +678,15 @@ def display_query_interface():
                 
                 # Display results
                 if results['results']:
+                    # Search Results Analysis (if enabled)
+                    if explain_results and rag.llm_available:
+                        st.subheader("📊 Search Results Analysis")
+                        try:
+                            analysis = rag.explain_search_results(question, results['results'], model=st.session_state.selected_model)
+                            st.info(analysis)
+                        except Exception as e:
+                            st.error(f"❌ Search analysis failed: {str(e)}")
+                    
                     if use_llm and rag.llm_available:
                         st.subheader("🤖 AI Response")
                         try:
